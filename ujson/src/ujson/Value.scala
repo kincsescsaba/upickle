@@ -1,6 +1,6 @@
 package ujson
 
-import upickle.core.{LinkedHashMap, ObjArrVisitor, ParseUtils, Visitor}
+import upickle.core.{LinkedHashMap, ObjArrVisitor, ParseUtils, Visitor, DequeueOrderedMap}
 import upickle.core.compat._
 
 import scala.language.implicitConversions
@@ -169,7 +169,7 @@ object Value extends AstTransformer[Value]{
 
   def visitArray(length: Int, index: Int) = new AstArrVisitor[mutable.ArrayBuffer](xs => ujson.Arr(xs))
 
-  def visitJsonableObject(length: Int, index: Int) = new AstObjVisitor[LinkedHashMap[String, Value]](xs => ujson.Obj(xs))
+  def visitJsonableObject(length: Int, index: Int) = new AstObjVisitor[DequeueOrderedMap[String, Value]](xs => ujson.Obj(xs))
 
   def visitNull(index: Int) = ujson.Null
 
@@ -204,10 +204,10 @@ object Value extends AstTransformer[Value]{
 }
 
 case class Str(value: String) extends Value
-case class Obj(value: LinkedHashMap[String, Value]) extends Value
+case class Obj(value: DequeueOrderedMap[String, Value]) extends Value
 object Obj{
   implicit def from(items: IterableOnce[(String, Value)]): Obj = {
-    Obj(LinkedHashMap(items))
+    Obj(DequeueOrderedMap(items))
   }
 
   // Weird telescoped version of `apply(items: (String, Value)*)`, to avoid
@@ -216,12 +216,12 @@ object Obj{
   // https://github.com/lihaoyi/upickle/issues/230
   def apply[V](item: (String, V),
                items: (String, Value)*)(implicit conv: V => Value): Obj = {
-    val map = LinkedHashMap[String, Value]()
+    val map = DequeueOrderedMap[String, Value]()
     map.put(item._1, conv(item._2))
     for (i <- items) map.put(i._1, i._2)
     Obj(map)
   }
-  def apply(): Obj = Obj(LinkedHashMap[String, Value]())
+  def apply(): Obj = Obj(DequeueOrderedMap[String, Value]())
 }
 case class Arr(value: mutable.ArrayBuffer[Value]) extends Value
 
